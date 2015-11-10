@@ -143,7 +143,7 @@ void list_opencl_platforms(void)
 }
 
 void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
-    lbm_context_t * lbm_context, speed_t * cells, int * obstacles)
+    lbm_context_t * lbm_context, float * cells, int * obstacles, float * tmp_cells)
 {
     /* get device etc. */
     cl_platform_id * platforms = NULL;
@@ -257,6 +257,49 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
     *   TODO
     *   Allocate memory and create kernels
     */
+	
+	
+	cl_mem d_cells = clCreateBuffer(lbm_context->context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                   sizeof(float)*params.nx*params.ny*9, cells, NULL);
+				   
+	cl_mem d_obs = clCreateBuffer(lbm_context->context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                   sizeof(int)*params.nx*params.ny, obstacles, NULL);
+				   
+	cl_mem d_tmp_cells = clCreateBuffer(lbm_context->context, CL_MEM_READ_WRITE,
+                   sizeof(float)*params.nx*params.ny*9, NULL, NULL);
+				   
+	cl_mem d_us = clCreateBuffer(lbm_context->context, CL_MEM_READ_WRITE,
+                   (sizeof(float)*params.nx*params.ny)/(32*32), NULL, NULL);
+
+				   
+	cl_kernel acc = clCreateKernel(program, "acc_flow", &err);
+
+	err  = clSetKernelArg(acc, 0, sizeof(param_t), &params);
+	err |= clSetKernelArg(acc, 1, sizeof(accel_area_t), &accel_area);
+	err |= clSetKernelArg(acc, 2, sizeof(cl_mem), &d_cells); 
+	err |= clSetKernelArg(acc, 3, sizeof(cl_mem), &d_obs);
+
+	lbm_context->kernel[1] = acc;
+	
+	cl_kernel kernel = clCreateKernel(program, "propagate", &err);
+
+	err  = clSetKernelArg(kernel, 0, sizeof(param_t), &params);
+	err |= clSetKernelArg(kernel, 1, sizeof(accel_area_t), &accel_area); 
+	err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_cells);
+	err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &d_tmp_cells);
+	err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &d_obs);
+	err |= clSetKernelArg(kernel, 5, sizeof(float)*(32*32), NULL);
+	err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), &d_us);
+	
+	lbm_context->kernel[0] = kernel;
+	
+	lbm_context->args[2] = d_cells;
+	lbm_context->args[3] = d_tmp_cells;
+	lbm_context->args[4] = d_obs;
+	lbm_context->args[6] = d_us;
+
+	if (CL_SUCCESS != err) DIE("OpenCL error %d assigning kernel args", err);
+
 }
 
 void opencl_finalise(lbm_context_t lbm_context)

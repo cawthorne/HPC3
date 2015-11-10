@@ -33,6 +33,17 @@ $(EXE) : utils.o lbm.o simulation.o opencl.o
 %.o: %.c Makefile lbm.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+git:
+	git add simulation.c
+	git add utils.c
+	git add lbm.c
+	git add lbm.h
+	git add Makefile
+	git add lbm_job_submit
+	git add kernels.cl
+	git add env.sh
+	git add opencl.c
+	
 run: $(EXE)
 	./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE) -d $(DEVICE)
 

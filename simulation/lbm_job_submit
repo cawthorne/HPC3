@@ -2,9 +2,9 @@
 
 #PBS -N LBM
 #PBS -joe
-#PBS -o LBM.out
+#PBS -o LBM2.out
 #PBS -q teaching
-#PBS -l nodes=1:ppn=8:gpus=1,walltime=00:10:00
+#PBS -l nodes=1:ppn=8:gpus=1,walltime=00:05:00
 
 #! Mail to user if job aborts
 #PBS -m a

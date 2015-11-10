@@ -107,13 +107,13 @@ void parse_args (int argc, char* argv[],
 }
 
 void initialise(const char* param_file, accel_area_t * accel_area,
-    param_t* params, speed_t** cells_ptr, speed_t** tmp_cells_ptr,
-    int** obstacles_ptr, double** av_vels_ptr)
+    param_t* params, float** cells_ptr, float** tmp_cells_ptr,
+    int** obstacles_ptr, float** av_vels_ptr)
 {
     FILE   *fp;            /* file pointer */
     int    ii,jj, kk;          /* generic counters */
     int    retval;         /* to hold return value for checking */
-    double w0,w1,w2;       /* weighting factors */
+    float w0,w1,w2;       /* weighting factors */
 
     /* Rectangular obstacles */
     int n_obstacles;
@@ -135,11 +135,11 @@ void initialise(const char* param_file, accel_area_t * accel_area,
     if (retval != 1) DIE("Could not read param file: max_iters");
     retval = fscanf(fp,"%d\n",&(params->reynolds_dim));
     if (retval != 1) DIE("Could not read param file: reynolds_dim");
-    retval = fscanf(fp,"%lf\n",&(params->density));
+    retval = fscanf(fp,"%f\n",&(params->density));
     if (retval != 1) DIE("Could not read param file: density");
-    retval = fscanf(fp,"%lf\n",&(params->accel));
+    retval = fscanf(fp,"%f\n",&(params->accel));
     if (retval != 1) DIE("Could not read param file: accel");
-    retval = fscanf(fp,"%lf\n",&(params->omega));
+    retval = fscanf(fp,"%f\n",&(params->omega));
     if (retval != 1) DIE("Could not read param file: omega");
 
     if (params->nx < 100) DIE("x dimension of grid in input file was too small (must be >100)");
@@ -191,16 +191,16 @@ void initialise(const char* param_file, accel_area_t * accel_area,
     fclose(fp);
 
     /* Allocate arrays */
-    *cells_ptr = (speed_t*) malloc(sizeof(speed_t)*(params->ny*params->nx));
+    *cells_ptr = (float*) malloc(sizeof(float)*(params->ny*params->nx)*9);
     if (*cells_ptr == NULL) DIE("Cannot allocate memory for cells");
 
-    *tmp_cells_ptr = (speed_t*) malloc(sizeof(speed_t)*(params->ny*params->nx));
+    *tmp_cells_ptr = (float*) malloc(sizeof(float)*(params->ny*params->nx)*9);
     if (*tmp_cells_ptr == NULL) DIE("Cannot allocate memory for tmp_cells");
 
     *obstacles_ptr = (int*) malloc(sizeof(int)*(params->ny*params->nx));
     if (*obstacles_ptr == NULL) DIE("Cannot allocate memory for patches");
 
-    *av_vels_ptr = (double*) malloc(sizeof(double)*(params->max_iters));
+    *av_vels_ptr = (float*) malloc(sizeof(float)*(params->max_iters));
     if (*av_vels_ptr == NULL) DIE("Cannot allocate memory for av_vels");
 
     w0 = params->density * 4.0/9.0;
@@ -213,17 +213,17 @@ void initialise(const char* param_file, accel_area_t * accel_area,
         for (jj = 0; jj < params->nx; jj++)
         {
             /* centre */
-            (*cells_ptr)[ii*params->nx + jj].speeds[0] = w0;
+            (*cells_ptr)[(ii*params->nx + jj)*9] = w0;
             /* axis directions */
-            (*cells_ptr)[ii*params->nx + jj].speeds[1] = w1;
-            (*cells_ptr)[ii*params->nx + jj].speeds[2] = w1;
-            (*cells_ptr)[ii*params->nx + jj].speeds[3] = w1;
-            (*cells_ptr)[ii*params->nx + jj].speeds[4] = w1;
+            (*cells_ptr)[(ii*params->nx + jj)*9+1] = w1;
+            (*cells_ptr)[(ii*params->nx + jj)*9+2] = w1;
+            (*cells_ptr)[(ii*params->nx + jj)*9+3] = w1;
+            (*cells_ptr)[(ii*params->nx + jj)*9+4] = w1;
             /* diagonals */
-            (*cells_ptr)[ii*params->nx + jj].speeds[5] = w2;
-            (*cells_ptr)[ii*params->nx + jj].speeds[6] = w2;
-            (*cells_ptr)[ii*params->nx + jj].speeds[7] = w2;
-            (*cells_ptr)[ii*params->nx + jj].speeds[8] = w2;
+            (*cells_ptr)[(ii*params->nx + jj)*9+5] = w2;
+            (*cells_ptr)[(ii*params->nx + jj)*9+6] = w2;
+            (*cells_ptr)[(ii*params->nx + jj)*9+7] = w2;
+            (*cells_ptr)[(ii*params->nx + jj)*9+8] = w2;
 
             (*obstacles_ptr)[ii*params->nx + jj] = 0;
         }
@@ -254,8 +254,8 @@ void initialise(const char* param_file, accel_area_t * accel_area,
     free(obstacles);
 }
 
-void finalise(speed_t** cells_ptr, speed_t** tmp_cells_ptr,
-    int** obstacles_ptr, double** av_vels_ptr)
+void finalise(float** cells_ptr, float** tmp_cells_ptr,
+    int** obstacles_ptr, float** av_vels_ptr)
 {
     /* Free allocated memory */
     free(*cells_ptr);
