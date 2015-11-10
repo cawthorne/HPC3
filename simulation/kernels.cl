@@ -29,53 +29,38 @@ typedef struct {
 *   Write OpenCL kernels
 */
 
-float total_density(const param_t params, __global float* cells)
-{
-    int ii,jj,kk;        /* generic counters */
-    float total = 0.0;  /* accumulator */
-
-    for (ii = 0; ii < params.ny; ii++)
-    {
-        for (jj = 0; jj < params.ny; jj++)
-        {
-            for (kk = 0; kk < NSPEEDS; kk++)
-            {
-                total += cells[(ii*params.nx + jj)*9 + kk];
-            }
-        }
-    }
-
-    return total;
-}
-
 
 void reduce(                                          
    __local  float*    local_sums,                          
-   __global float*    partial_sums)                        
+   __global float*    partial_sums, int iter)                        
 {                                                          
    int num_wrk_items  = get_local_size(0)*get_local_size(1);                 
    int local_id       = get_local_id(0)*get_local_size(1) + get_local_id(1);                   
-   int group_id       = get_group_id(0)*get_num_groups(1) + get_group_id(1);                   
+   int group_id       = get_num_groups(0)*get_num_groups(1)*iter + get_group_id(0)*get_num_groups(1) + get_group_id(1);                   
    
    float sum;  
    int tots;
    int i;                                      
    
-   if (local_id == 0) {                      
+   if (local_id == 0) {  
+ 
       sum = 0.0f;                            
    
       for (i=0; i<num_wrk_items; i++) {        
           sum += local_sums[i];             
       }                                     
    
-      partial_sums[group_id] = sum;         
+      partial_sums[group_id] = sum; 
+	  
    }
 }
 
+
 __kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float* cells, __global int* obstacles){
 	
-	 float w1,w2;  /* weighting factors */
-	int jj,ii;
+	     int ii,jj;     /* generic counters */
+    double w1,w2;  /* weighting factors */
+
     /* compute weighting factors */
     w1 = params.density * params.accel / 9.0;
     w2 = params.density * params.accel / 36.0;
@@ -83,56 +68,54 @@ __kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float*
     if (accel_area.col_or_row == ACCEL_COLUMN)
     {
         jj = accel_area.idx;
-			
-			ii = get_global_id(0);
 
-			int current_index = (ii*params.nx + jj)*9;
+        ii= get_global_id(0);
+        
             /* if the cell is not occupied and
             ** we don't send a density negative */
             if (!obstacles[ii*params.nx + jj] &&
-            (cells[ii*params.nx + jj + 4] - w1) > 0.0 &&
-            (cells[ii*params.nx + jj + 7] - w2) > 0.0 &&
-            (cells[ii*params.nx + jj + 8] - w2) > 0.0 )
+            (cells[(ii*params.nx + jj)*9 + 4] - w1) > 0.0 &&
+            (cells[(ii*params.nx + jj)*9 + 7] - w2) > 0.0 &&
+            (cells[(ii*params.nx + jj)*9 + 8] - w2) > 0.0 )
             {
-               /* increase 'north-side' densities */
-                cells[current_index + 2] += w1;
-                cells[current_index + 5] += w2;
-                cells[current_index + 6] += w2;
+                /* increase 'north-side' densities */
+                cells[(ii*params.nx + jj)*9 + 2] += w1;
+                cells[(ii*params.nx + jj)*9 + 5] += w2;
+                cells[(ii*params.nx + jj)*9 + 6] += w2;
                 /* decrease 'south-side' densities */
-                cells[current_index + 4] -= w1;
-                cells[current_index + 7] -= w2;
-                cells[current_index + 8] -= w2;
-				
+                cells[(ii*params.nx + jj)*9 + 4] -= w1;
+                cells[(ii*params.nx + jj)*9 + 7] -= w2;
+                cells[(ii*params.nx + jj)*9 + 8] -= w2;
             }
+        
     }
     else
     {
         ii = accel_area.idx;
 
-			jj = get_global_id(0);
-			
-			int current_index = (ii*params.nx + jj)*9;
+        jj = get_global_id(0);
             /* if the cell is not occupied and
             ** we don't send a density negative */
             if (!obstacles[ii*params.nx + jj] &&
-            (cells[current_index + 3] - w1) > 0.0 &&
-            (cells[current_index + 6] - w2) > 0.0 &&
-            (cells[current_index + 7] - w2) > 0.0 )
+            (cells[(ii*params.nx + jj)*9 + 3] - w1) > 0.0 &&
+            (cells[(ii*params.nx + jj)*9 + 6] - w2) > 0.0 &&
+            (cells[(ii*params.nx + jj)*9 + 7] - w2) > 0.0 )
             {
-				/* increase 'east-side' densities */
-                cells[current_index + 1] += w1;
-                cells[current_index + 5] += w2;
-                cells[current_index + 8] += w2;
+                /* increase 'east-side' densities */
+                cells[(ii*params.nx + jj)*9 + 1] += w1;
+                cells[(ii*params.nx + jj)*9 + 5] += w2;
+                cells[(ii*params.nx + jj)*9 + 8] += w2;
                 /* decrease 'west-side' densities */
-                cells[current_index + 3] -= w1;
-                cells[current_index + 6] -= w2;
-                cells[current_index + 7] -= w2;
+                cells[(ii*params.nx + jj)*9 + 3] -= w1;
+                cells[(ii*params.nx + jj)*9 + 6] -= w2;
+                cells[(ii*params.nx + jj)*9 + 7] -= w2;
             }
+
     }
 }
 
 
-__kernel void propagate(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us){
+__kernel void propagate(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us, const unsigned int iter){
 
 
 int kk;       /* generic counters */
@@ -186,8 +169,7 @@ int jj,ii;
 				tmp_cells[current_index + 5] = cells[(y_s*params.nx + x_w)*9  + 5]; 
 				tmp_cells[current_index + 6] = cells[(y_s*params.nx + x_e)*9  + 6];
 				tmp_cells[current_index + 7] = cells[(y_n*params.nx + x_e)*9 + 7]; 
-				tmp_cells[current_index + 8] = cells[(y_n*params.nx + x_w)*9  + 8];
-				tmp_cells[current_index + 5] = cells[(y_s*params.nx + x_w)*9  + 5]; 	
+				tmp_cells[current_index + 8] = cells[(y_n*params.nx + x_w)*9  + 8];	
 
 			if (!obstacles[ii*params.nx + jj])
             {
@@ -304,11 +286,6 @@ int jj,ii;
                 /* accumulate the norm of x- and y- velocity components */
                 l_us[current_local_id] = sqrt(u_x*u_x + u_y*u_y);
 				
-				//printf("\nquack2 %f\n",local_density);
-				if (l_us[current_local_id] != 0){
-					//printf("not zero");
-				}
-				
             } else {
 				
 					float v1 = tmp_cells[current_index + 3];
@@ -325,11 +302,7 @@ int jj,ii;
 					tmp_cells[current_index + 6] = v6;
 			}
 		 barrier(CLK_LOCAL_MEM_FENCE);
-		reduce(l_us, g_us);
 		
-		//if (get_global_id(0) == 0 && get_global_id(1) == 0){
-		//printf("tot density: %.12E\n", total_density(params, tmp_cells));}
-		
-		//barrier(CLK_GLOBAL_MEM_FENCE);
-		
+		 reduce(l_us, g_us, iter);
+	
 }

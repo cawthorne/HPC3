@@ -269,8 +269,7 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
                    sizeof(float)*params.nx*params.ny*9, NULL, NULL);
 				   
 	cl_mem d_us = clCreateBuffer(lbm_context->context, CL_MEM_READ_WRITE,
-                   (sizeof(float)*params.nx*params.ny)/(32*32), NULL, NULL);
-
+                   (sizeof(float)*params.max_iters*params.nx*params.ny)/(32*32), NULL, NULL);			   
 				   
 	cl_kernel acc = clCreateKernel(program, "acc_flow", &err);
 
@@ -282,7 +281,7 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
 	lbm_context->kernel[1] = acc;
 	
 	cl_kernel kernel = clCreateKernel(program, "propagate", &err);
-
+	
 	err  = clSetKernelArg(kernel, 0, sizeof(param_t), &params);
 	err |= clSetKernelArg(kernel, 1, sizeof(accel_area_t), &accel_area); 
 	err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_cells);
@@ -290,6 +289,7 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
 	err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &d_obs);
 	err |= clSetKernelArg(kernel, 5, sizeof(float)*(32*32), NULL);
 	err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), &d_us);
+
 	
 	lbm_context->kernel[0] = kernel;
 	

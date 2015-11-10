@@ -203,10 +203,10 @@ int main(int argc, char* argv[])
     initialise(param_file, &accel_area, &params, &cells, &tmp_cells, &obstacles, &av_vels);
     opencl_initialise(device_id, params, accel_area, &lbm_context, cells, obstacles, tmp_cells);
 
-	float* us = malloc(sizeof(float)*params.nx*params.ny/(32*32));
+	float* us = malloc(sizeof(float)*params.max_iters*params.nx*params.ny/(32*32));
 
 	int ob_num = 0;
-	int i,j;
+	int i;
 	for (i=0;i<params.nx*params.ny;i++){
 		ob_num += !obstacles[i];
 	}
@@ -220,70 +220,55 @@ int main(int argc, char* argv[])
     tic=timstr.tv_sec+(timstr.tv_usec/1000000.0);
 	int iiM;
 	cl_int err;
-	int k;
+
     for (iiM = 0; iiM < params.max_iters; iiM++)
     {
-	
-	accelerate_flow(params, accel_area,cells, obstacles);
-	
-	//err = clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[1], 1, NULL, &global[0], &local[0], 0, NULL, NULL);
-	
-	err = clEnqueueWriteBuffer(lbm_context.queue, lbm_context.args[2], CL_TRUE,
-         0, sizeof(float)*params.nx*params.ny*9, cells, 0, NULL, NULL);
-	err = clEnqueueWriteBuffer(lbm_context.queue, lbm_context.args[3], CL_TRUE,
-         0, sizeof(float)*params.nx*params.ny*9, tmp_cells, 0, NULL, NULL);
+	err = clSetKernelArg(lbm_context.kernel[0], 7, sizeof(int), &iiM);
+	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[1], 1, NULL, &global[0], &local[0], 0, NULL, NULL);
 
-	err = clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[0], 2, NULL, global, local, 0, NULL, NULL);
+	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[0], 2, NULL, global, local, 0, NULL, NULL);
 	
-	err = clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[3], CL_TRUE,
-         0, sizeof(float)*params.nx*params.ny*9, cells, 0, NULL, NULL);
-		 
-		 err = clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[2], CL_TRUE,
-         0, sizeof(float)*params.nx*params.ny*9, tmp_cells, 0, NULL, NULL);
 	
-	/*if ((iiM & 1) == 0){
+	if ((iiM & 1) == 0){
 		err |= clSetKernelArg(lbm_context.kernel[0], 2, sizeof(cl_mem), &lbm_context.args[3]);
 		err |= clSetKernelArg(lbm_context.kernel[0], 3, sizeof(cl_mem), &lbm_context.args[2]);
-
+		
+		err |= clSetKernelArg(lbm_context.kernel[1], 2, sizeof(cl_mem), &lbm_context.args[3]);
 	} else {
 
 		err |= clSetKernelArg(lbm_context.kernel[0], 2, sizeof(cl_mem), &lbm_context.args[2]);
 		err |= clSetKernelArg(lbm_context.kernel[0], 3, sizeof(cl_mem), &lbm_context.args[3]);
-	}*/
-	
-		for (i = 0;i<params.nx;i++){
-			for (j = 0;j<params.ny;j++){
-				for (k = 0;k<9;k++){
-					//printf("\n%f\n",tmp_cells[(j*params.nx + i)*9 + k]);
-				if(tmp_cells[(j*params.nx + i)*9 + k] != 2){
-					//printf("\nnot 2\n");
-				}}
-			}
-		}
-		 
-	err |= clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[6], CL_TRUE,
-         0, sizeof(float)*params.nx*params.ny/(32*32), us, 0, NULL, NULL);
-	
-	if (CL_SUCCESS != err){printErr(err); DIE("OpenCL error %d", err);}
-	float u = 0;
-	
-	for (i = 0;i<params.nx*params.ny/(32*32);i++){
-		u += us[i];
-		
+
+		err |= clSetKernelArg(lbm_context.kernel[1], 2, sizeof(cl_mem), &lbm_context.args[2]);
 	}
-        av_vels[iiM] = u/(float)ob_num;
-		printf("\navs %.12E %d",u,ob_num);
+	
+
     }
+	
+	err |= clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[6], CL_TRUE,
+         0, sizeof(float)*params.max_iters*params.nx*params.ny/(32*32), us, 0, NULL, NULL);
+	
+	
 	if ((iiM & 1) == 0){
-		//printf("\nmooooooooooooooooooo\n");
-		err = clEnqueueWriteBuffer(lbm_context.queue, lbm_context.args[2], CL_TRUE,
+		err = clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[2], CL_TRUE,
          0, sizeof(float)*params.nx*params.ny*9, cells, 0, NULL, NULL);
 
 	} else {
-		err = clEnqueueWriteBuffer(lbm_context.queue, lbm_context.args[3], CL_TRUE,
+		err = clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[3], CL_TRUE,
          0, sizeof(float)*params.nx*params.ny*9, cells, 0, NULL, NULL);
 	}
 		if (CL_SUCCESS != err){printErr(err); DIE("OpenCL error %d", err);}
+		
+	int j;
+	float u;
+	for (i = 0;i<params.max_iters;i++){
+		u=0;
+		for (j = 0;j<params.nx*params.ny/(32*32);j++){
+			u += us[i*params.nx*params.ny/(32*32) + j];
+		}
+		av_vels[i] = u/(float)ob_num;
+	    //printf("\navs %.12E %d %.12E %.12E\n",u,ob_num,calc_reynolds(params,av_vels[i]), total_density(params, cells));
+	}
 
     // Do not remove this, or the timing will be incorrect!
     clFinish(lbm_context.queue);
