@@ -40,19 +40,21 @@ void reduce(
    
    float sum;  
    int tots;
-   int i;                                      
-   
-   if (local_id == 0) {  
+   int i,j;                                      
+   int mask;
+   for (mask=1;mask<num_wrk_items;mask*=2){
+    	
+	if ((local_id & mask) == 0 && (local_id & (mask-1)) == 0) {  
  
-      sum = 0.0f;                            
-   
-      for (i=0; i<num_wrk_items; i++) {        
-          sum += local_sums[i];             
-      }                                     
+	  local_sums[local_id] += local_sums[local_id+mask];
+      sum = 0.0f;                                                                
    
       partial_sums[group_id] = sum; 
 	  
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
    }
+   partial_sums[group_id] = local_sums[0]; 
 }
 
 
