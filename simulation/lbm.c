@@ -224,6 +224,7 @@ int main(int argc, char* argv[])
     for (iiM = 0; iiM < params.max_iters; iiM++)
     {
 	err = clSetKernelArg(lbm_context.kernel[0], 7, sizeof(int), &iiM);
+	
 	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[1], 1, NULL, &global[0], &local[0], 0, NULL, NULL);
 
 	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[0], 2, NULL, global, local, 0, NULL, NULL);
