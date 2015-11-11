@@ -35,7 +35,7 @@ void reduce(
    __global float*    partial_sums, int iter)                        
 {                                                          
    int num_wrk_items  = get_local_size(0)*get_local_size(1);                 
-   int local_id       = get_local_id(0)*get_local_size(1) + get_local_id(1);                   
+   int local_id       = get_local_id(1)*get_local_size(0) + get_local_id(0);                   
    int group_id       = get_num_groups(0)*get_num_groups(1)*iter + get_group_id(0)*get_num_groups(1) + get_group_id(1);                   
    
    float sum;  
@@ -61,7 +61,7 @@ void reduce(
 __kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float* cells, __global int* obstacles){
 	
 	     int ii,jj;     /* generic counters */
-    double w1,w2;  /* weighting factors */
+    doutmp2le w1,w2;  /* weighting factors */
 
     /* compute weighting factors */
     w1 = params.density * params.accel / 9.0;
@@ -136,11 +136,11 @@ int jj,ii;
     /* compute weighting factors */
 
     float u_x,u_y;               /* av. velocities in x and y directions */
-    float u_sq;                  /* squared velocity */
+    float u_sq;                  /* squtmp1red velocity */
     float local_density;         /* sum of densities in a particular cell */
 	
-	ii = get_global_id(0);
-	jj = get_global_id(1);
+	ii = get_global_id(1);
+	jj = get_global_id(0);
 
 			if (ii + 1 == params.ny){
 				y_n = 0;
@@ -158,81 +158,89 @@ int jj,ii;
             ** appropriate directions of travel and writing into
             ** scratch space grid */
 			
-			    float tcells[NSPEEDS];            /* directional velocities */
+			 float local_cell[NSPEEDS];
 				
 			int current_index = (ii*params.nx + jj)*9;
-				tcells[0] = cells[current_index];
-				tcells[1] = cells[(ii*params.nx + x_w)*9 + 1];		
-				tcells[2] = cells[(y_s*params.nx + jj)*9  + 2];				
-				tcells[3] = cells[(ii*params.nx + x_e)*9 + 3];
-				tcells[4] = cells[(y_n*params.nx + jj)*9 + 4];  
-				tcells[5] = cells[(y_s*params.nx + x_w)*9  + 5]; 
-				tcells[6] = cells[(y_s*params.nx + x_e)*9  + 6];
-				tcells[7] = cells[(y_n*params.nx + x_e)*9 + 7]; 
-				tcells[8] = cells[(y_n*params.nx + x_w)*9  + 8];	
+			
+				local_cell[0] = cells[current_index];
+				local_cell[1] = cells[(ii*params.nx + x_w)*9 + 1];		
+				local_cell[2] = cells[(y_s*params.nx + jj)*9  + 2];				
+				local_cell[3] = cells[(ii*params.nx + x_e)*9 + 3];
+				local_cell[4] = cells[(y_n*params.nx + jj)*9 + 4];  
+				local_cell[5] = cells[(y_s*params.nx + x_w)*9  + 5]; 
+				local_cell[6] = cells[(y_s*params.nx + x_e)*9  + 6];
+				local_cell[7] = cells[(y_n*params.nx + x_e)*9 + 7]; 
+				local_cell[8] = cells[(y_n*params.nx + x_w)*9  + 8];	
 
-				
-				            /* compute local density total */
-            	local_density = tcells[0]+tcells[1]+tcells[2]+tcells[3]+tcells[4]+tcells[5]+tcells[6]+tcells[7]+tcells[8];
+
+            	local_density = local_cell[0] 
+				+local_cell[1]+local_cell[2]+ 
+				local_cell[3]+local_cell[4]+local_cell[5]+ 
+				local_cell[6]+local_cell[7]+local_cell[8];
 				
                 /* compute x velocity component */
-                u_x = (tcells[1] + tcells[5] + tcells[8] - (tcells[3] +tcells[6] + tcells[7]))/local_density;
+                u_x = (local_cell[1] + local_cell[5] + local_cell[8] - (local_cell[3] + 
+				local_cell[6] + local_cell[7]))/local_density;
 
                 /* compute y velocity component */
-                u_y = (tcells[2] + tcells[5] + tcells[6]- (tcells[4] +tcells[7] + tcells[8]))/ local_density;
+                u_y = (local_cell[2] + local_cell[5] + local_cell[6]- (local_cell[4] + 
+				local_cell[7] 
+				+ local_cell[8]))/ local_density;
 
-                /* velocity squared */
+                /* velocity squtmp1red */
                 u_sq = u_x * u_x + u_y * u_y;
+                
+				const float utmp1 =   u_x + u_y; 
 
-                /* directional velocity components */
-                const float ua =   u_x + u_y;  /* north-east */
-                const float ub = - u_x + u_y;  /* north-west */
+                const float utmp2 = - u_x + u_y;
 
 				const int b = obstacles[ii*params.nx + jj];
 				
 		
-				tmp_cells[current_index + 0] = b ? tcells[0]:(tcells[0]+ params.omega * ( w0C * local_density * (1.0 - u_sq * (1.5)) - tcells[0]));
-                tmp_cells[current_index + 1] = b ? tcells[3]:(tcells[1]+ params.omega * ( w1C * local_density * (1.0 + u_x*3.0
+				tmp_cells[current_index + 0] = b ? local_cell[0] : (local_cell[0] + params.omega * ( w0C * local_density * (1.0 - u_sq * (1.5)) - local_cell[0]));
+                
+				tmp_cells[current_index + 1] = b ? local_cell[3] : (local_cell[1] + params.omega * ( w1C * local_density * (1.0 + u_x * 3.0
                     + (u_x * u_x)*4.5
-                    - u_sq *(1.5)) - tcells[1]));
-				tmp_cells[current_index + 2] = b ? tcells[4]:(tcells[2]+ params.omega * (w1C * local_density * (1.0 + u_y*3.0
+                    - u_sq *(1.5)) - local_cell[1]));
+				tmp_cells[current_index + 2] = b ? local_cell[4]:(local_cell[2] + params.omega * (w1C * local_density * (1.0 + u_y * 3.0
                     + (u_y * u_y)*4.5
-                    - u_sq *(1.5)) - tcells[2]));
-				tmp_cells[current_index + 3] = b ? tcells[1]:(tcells[3]+ params.omega * (w1C * local_density * (1.0 - u_x*3.0
+                    - u_sq *(1.5)) - local_cell[2]));
+				tmp_cells[current_index + 3] = b ? local_cell[1]:(local_cell[3] + params.omega * (w1C * local_density * (1.0 - u_ x* 3.0
                     + (u_x * u_x)*4.5
-                    - u_sq *(1.5)) - tcells[3]));
-				tmp_cells[current_index + 4] = b ? tcells[2]:(tcells[4]+ params.omega * ( w1C * local_density * (1.0 - u_y*3.0
+                    - u_sq *(1.5)) - local_cell[3]));
+				tmp_cells[current_index + 4] = b ? local_cell[2]:(local_cell[4] + params.omega * ( w1C * local_density * (1.0 - u_y * 3.0
                     + (u_y * u_y)*4.5
-                    - u_sq *(1.5)) - tcells[4]));
-				tmp_cells[current_index + 5] = b ? tcells[7]:(tcells[5]+ params.omega * (w2C * local_density * (1.0 + ua*3.0
-                    + (ua * ua)*4.5
-                    - u_sq *(1.5)) - tcells[5]));
-				tmp_cells[current_index + 6] = b ? tcells[8]:(tcells[6]+ params.omega * (w2C * local_density * (1.0 + ub*3.0
-                    + (ub * ub)*4.5
-                    - u_sq *(1.5)) - tcells[6]));
-				tmp_cells[current_index + 7] = b ? tcells[5]:(tcells[7]+ params.omega * (w2C * local_density * (1.0 - ua*3.0
-                    + (ua * ua)*4.5
-                    - u_sq *(1.5)) - tcells[7]));
-				tmp_cells[current_index + 8] = b ? tcells[6]:(tcells[8]+ params.omega * (w2C * local_density * (1.0 - ub*3.0
-                    + (ub * ub)*4.5
-                    - u_sq *(1.5)) - tcells[8]));
+                    - u_sq *(1.5)) - local_cell[4]));
+				tmp_cells[current_index + 5] = b ? local_cell[7]:(local_cell[5] + params.omega * (w2C * local_density * (1.0 + utmp1 * 3.0
+                    + (utmp1 * utmp1)*4.5
+                    - u_sq *(1.5)) - local_cell[5]));
+				tmp_cells[current_index + 6] = b ? local_cell[8]:(local_cell[6] + params.omega * (w2C * local_density * (1.0 + utmp2 * 3.0
+                    + (utmp2 * utmp2)*4.5
+                    - u_sq *(1.5)) - local_cell[6]));
+				tmp_cells[current_index + 7] = b ? local_cell[5]:(local_cell[7] + params.omega * (w2C * local_density * (1.0 - utmp1 * 3.0
+                    + (utmp1 * utmp1)*4.5
+                    - u_sq *(1.5)) - local_cell[7]));
+				tmp_cells[current_index + 8] = b ? local_cell[6]:(local_cell[8] + params.omega * (w2C * local_density * (1.0 - utmp2 * 3.0
+                    + (utmp2 * utmp2)*4.5
+                    - u_sq *(1.5)) - local_cell[8]));
 					
 				local_density =0.0f;
 					
 
 					
-                local_density =(    tmp_cells[current_index + 0] 
-									+tmp_cells[current_index + 1]
-									+tmp_cells[current_index + 2]
-									+tmp_cells[current_index + 3]
-									+tmp_cells[current_index + 4]
-									+tmp_cells[current_index + 5]
-									+tmp_cells[current_index + 6]
-									+tmp_cells[current_index + 7]
-									+tmp_cells[current_index + 8]);
+                local_density = (tmp_cells[current_index + 0] +
+							 tmp_cells[current_index + 1]+
+							 tmp_cells[current_index + 2]+
+							 tmp_cells[current_index + 3]+
+							 tmp_cells[current_index + 4]+
+							 tmp_cells[current_index + 5]+
+							 tmp_cells[current_index + 6]+
+							 tmp_cells[current_index + 7]+
+							 tmp_cells[current_index + 8]);
 
                 /* x-component of velocity */
-                u_x = b ? u_x : (tmp_cells[current_index + 1] +
+                u_x = b ? u_x : 
+				(tmp_cells[current_index + 1] +
                         tmp_cells[current_index + 5] +
                         tmp_cells[current_index + 8]
                     - (tmp_cells[current_index + 3] +
@@ -241,7 +249,8 @@ int jj,ii;
                     local_density;
 
                 /* compute y velocity component */
-                u_y =  b ? u_y : (tmp_cells[current_index + 2] +
+                u_y =  b ? u_y : 
+				(tmp_cells[current_index + 2] +
                         tmp_cells[current_index + 5] +
                         tmp_cells[current_index + 6]
                     - (tmp_cells[current_index + 4] +
