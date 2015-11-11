@@ -61,7 +61,7 @@ void reduce(
 __kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float* cells, __global int* obstacles){
 	
 	     int ii,jj;     /* generic counters */
-    doutmp2le w1,w2;  /* weighting factors */
+    float w1,w2;  /* weighting factors */
 
     /* compute weighting factors */
     w1 = params.density * params.accel / 9.0;
@@ -205,7 +205,7 @@ int jj,ii;
 				tmp_cells[current_index + 2] = b ? local_cell[4]:(local_cell[2] + params.omega * (w1C * local_density * (1.0 + u_y * 3.0
                     + (u_y * u_y)*4.5
                     - u_sq *(1.5)) - local_cell[2]));
-				tmp_cells[current_index + 3] = b ? local_cell[1]:(local_cell[3] + params.omega * (w1C * local_density * (1.0 - u_ x* 3.0
+				tmp_cells[current_index + 3] = b ? local_cell[1]:(local_cell[3] + params.omega * (w1C * local_density * (1.0 - u_x* 3.0
                     + (u_x * u_x)*4.5
                     - u_sq *(1.5)) - local_cell[3]));
 				tmp_cells[current_index + 4] = b ? local_cell[2]:(local_cell[4] + params.omega * ( w1C * local_density * (1.0 - u_y * 3.0
