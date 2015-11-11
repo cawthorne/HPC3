@@ -58,14 +58,17 @@ void reduce(
 }
 
 
-__kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float* cells, __global int* obstacles){
-	
-	     int ii,jj;     /* generic counters */
+__kernel void propagate(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us, const int iter){
+
+
+     int ii,jj;     /* generic counters */
     float w1,w2;  /* weighting factors */
 
     /* compute weighting factors */
     w1 = params.density * params.accel / 9.0;
     w2 = params.density * params.accel / 36.0;
+	
+if (get_global_id(1) == 2){
 
     if (accel_area.col_or_row == ACCEL_COLUMN)
     {
@@ -115,10 +118,8 @@ __kernel void acc_flow(param_t params, accel_area_t accel_area,  __global float*
 
     }
 }
-
-
-__kernel void propagate(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us, const int iter){
-
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
 
 int kk;       /* generic counters */
          
@@ -132,7 +133,6 @@ int kk;       /* generic counters */
 				int current_local_id = get_local_id(1)*get_local_size(0) + get_local_id(0);
 				l_us[current_local_id] = 0;
 	
-int jj,ii;
     /* compute weighting factors */
 
     float u_x,u_y;               /* av. velocities in x and y directions */

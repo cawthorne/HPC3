@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     initialise(param_file, &accel_area, &params, &cells, &tmp_cells, &obstacles, &av_vels);
     opencl_initialise(device_id, params, accel_area, &lbm_context, cells, obstacles, tmp_cells);
 
-	float* us = malloc(sizeof(float)*params.max_iters*params.nx*params.ny/(32*32));
+	float* us = malloc(sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size));
 
 	int ob_num = 0;
 	int i;
@@ -213,7 +213,7 @@ int main(int argc, char* argv[])
 	
 	size_t global[2] = {params.nx,params.ny};
 	
-	size_t local[2] = {32,32};
+	size_t local[2] = {lbm_context.local_size,lbm_context.local_size};
 	
     /* iterate for max_iters timesteps */
     gettimeofday(&timstr,NULL);
@@ -224,8 +224,6 @@ int main(int argc, char* argv[])
     for (iiM = 0; iiM < params.max_iters; iiM++)
     {
 	err = clSetKernelArg(lbm_context.kernel[0], 7, sizeof(int), &iiM);
-	
-	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[1], 1, NULL, &global[0], &local[0], 0, NULL, NULL);
 
 	err |= clEnqueueNDRangeKernel(lbm_context.queue, lbm_context.kernel[0], 2, NULL, global, local, 0, NULL, NULL);
 	
@@ -233,21 +231,18 @@ int main(int argc, char* argv[])
 	if ((iiM & 1) == 0){
 		err |= clSetKernelArg(lbm_context.kernel[0], 2, sizeof(cl_mem), &lbm_context.args[3]);
 		err |= clSetKernelArg(lbm_context.kernel[0], 3, sizeof(cl_mem), &lbm_context.args[2]);
-		
-		err |= clSetKernelArg(lbm_context.kernel[1], 2, sizeof(cl_mem), &lbm_context.args[3]);
+
 	} else {
 
 		err |= clSetKernelArg(lbm_context.kernel[0], 2, sizeof(cl_mem), &lbm_context.args[2]);
 		err |= clSetKernelArg(lbm_context.kernel[0], 3, sizeof(cl_mem), &lbm_context.args[3]);
-
-		err |= clSetKernelArg(lbm_context.kernel[1], 2, sizeof(cl_mem), &lbm_context.args[2]);
 	}
 	
 
     }
 	
 	err |= clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[6], CL_TRUE,
-         0, sizeof(float)*params.max_iters*params.nx*params.ny/(32*32), us, 0, NULL, NULL);
+         0, sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size), us, 0, NULL, NULL);
 	
 	
 	if ((iiM & 1) == 0){
@@ -264,8 +259,8 @@ int main(int argc, char* argv[])
 	float u;
 	for (i = 0;i<params.max_iters;i++){
 		u=0;
-		for (j = 0;j<params.nx*params.ny/(32*32);j++){
-			u += us[i*params.nx*params.ny/(32*32) + j];
+		for (j = 0;j<params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size);j++){
+			u += us[i*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size) + j];
 		}
 		av_vels[i] = u/(float)ob_num;
 	    //printf("\navs %.12E %d %.12E %.12E\n",u,ob_num,calc_reynolds(params,av_vels[i]), total_density(params, cells));
