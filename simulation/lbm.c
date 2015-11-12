@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
     initialise(param_file, &accel_area, &params, &cells, &tmp_cells, &obstacles, &av_vels);
     opencl_initialise(device_id, params, accel_area, &lbm_context, cells, obstacles, tmp_cells);
 
-	float* us = malloc(sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size));
+	float* us = malloc((long)sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_sizex*lbm_context.local_sizey));
 
 	int ob_num = 0;
 	int i;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 	
 	size_t global[2] = {params.nx,params.ny};
 	
-	size_t local[2] = {lbm_context.local_size,lbm_context.local_size};
+	size_t local[2] = {lbm_context.local_sizex,lbm_context.local_sizey};
 	
     /* iterate for max_iters timesteps */
     gettimeofday(&timstr,NULL);
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     }
 	
 	err |= clEnqueueReadBuffer(lbm_context.queue, lbm_context.args[6], CL_TRUE,
-         0, sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size), us, 0, NULL, NULL);
+         0, (long)sizeof(float)*params.max_iters*params.nx*params.ny/(lbm_context.local_sizex*lbm_context.local_sizey), us, 0, NULL, NULL);
 	
 	
 	if ((iiM & 1) == 0){
@@ -199,8 +199,8 @@ int main(int argc, char* argv[])
 	float u;
 	for (i = 0;i<params.max_iters;i++){
 		u=0;
-		for (j = 0;j<params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size);j++){
-			u += us[i*params.nx*params.ny/(lbm_context.local_size*lbm_context.local_size) + j];
+		for (j = 0;j<params.nx*params.ny/(lbm_context.local_sizex*lbm_context.local_sizey);j++){
+			u += us[i*params.nx*params.ny/(lbm_context.local_sizex*lbm_context.local_sizey) + j];
 		}
 		av_vels[i] = u/(float)ob_num;
 	    //printf("\navs %.12E %d %.12E %.12E\n",u,ob_num,calc_reynolds(params,av_vels[i]), total_density(params, cells));

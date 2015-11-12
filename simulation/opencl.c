@@ -318,7 +318,19 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
     *   Allocate memory and create kernels
     */
 	
-	lbm_context->local_size = 32;
+	cl_kernel kernel;
+	
+	if (params.nx == 1000){
+		
+		kernel = clCreateKernel(program, "propagateL", &err);
+		lbm_context->local_sizex = 8;
+		lbm_context->local_sizey = 8;
+	} else {
+		
+		kernel = clCreateKernel(program, "propagate", &err);
+		lbm_context->local_sizex = 32;
+		lbm_context->local_sizey = 32;
+	}
 	
 	accelerate_flow(params,accel_area,cells,obstacles);
 	
@@ -332,17 +344,15 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
                    sizeof(float)*params.nx*params.ny*9, NULL, NULL);
 				   
 	cl_mem d_us = clCreateBuffer(lbm_context->context, CL_MEM_READ_WRITE,
-                   (sizeof(float)*params.max_iters*params.nx*params.ny)/(lbm_context->local_size*lbm_context->local_size), NULL, NULL);			   
-				   
-	
-	cl_kernel kernel = clCreateKernel(program, "propagate", &err);
+                   (long)(sizeof(float)*params.max_iters*params.nx*params.ny)/(lbm_context->local_sizex*lbm_context->local_sizey), NULL, NULL);			   
+
 	
 	err  = clSetKernelArg(kernel, 0, sizeof(param_t), &params);
 	err |= clSetKernelArg(kernel, 1, sizeof(accel_area_t), &accel_area); 
 	err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_cells);
 	err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &d_tmp_cells);
 	err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &d_obs);
-	err |= clSetKernelArg(kernel, 5, sizeof(float)*(lbm_context->local_size*lbm_context->local_size), NULL);
+	err |= clSetKernelArg(kernel, 5, sizeof(float)*(lbm_context->local_sizex*lbm_context->local_sizey), NULL);
 	err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), &d_us);
 
 	

@@ -38,7 +38,8 @@ typedef struct {
     cl_command_queue queue;
 	cl_kernel kernel[2];
 	cl_mem args[7];
-	int local_size;
+	int local_sizex;
+	int local_sizey;
 } lbm_context_t;
 
 /* struct to hold the 'speed' values */
