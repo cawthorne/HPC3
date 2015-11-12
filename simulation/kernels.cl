@@ -61,64 +61,7 @@ __kernel void propagate(param_t params, accel_area_t accel_area, __global float*
 
 
      int ii,jj;     /* generic counters */
-    float w1,w2;  /* weighting factors */
-
-    /* compute weighting factors */
-    w1 = params.density * params.accel / 9.0;
-    w2 = params.density * params.accel / 36.0;
 	
-if (get_global_id(1) == 2){
-
-    if (accel_area.col_or_row == ACCEL_COLUMN)
-    {
-        jj = accel_area.idx;
-
-        ii= get_global_id(0);
-        
-            /* if the cell is not occupied and
-            ** we don't send a density negative */
-            if (!obstacles[ii*params.nx + jj] &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*4] - w1) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*8] - w2) > 0.0 )
-            {
-                /* increase 'north-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*2] += w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*6] += w2;
-                /* decrease 'south-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*4] -= w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*8] -= w2;
-            }
-        
-    }
-    else
-    {
-        ii = accel_area.idx;
-
-        jj = get_global_id(0);
-            /* if the cell is not occupied and
-            ** we don't send a density negative */
-            if (!obstacles[ii*params.nx + jj] &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*3] - w1) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*6] - w2) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 )
-            {
-                /* increase 'east-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*1] += w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*8] += w2;
-                /* decrease 'west-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*3] -= w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*6] -= w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
-            }
-
-    }
-}
-	
-	barrier(CLK_GLOBAL_MEM_FENCE);
 
 int kk;       /* generic counters */
          
@@ -264,5 +207,62 @@ int kk;       /* generic counters */
 		 barrier(CLK_LOCAL_MEM_FENCE);
 		
 		 reduce(l_us, g_us, iter);
+	
+	    float w1,w2;  /* weighting factors */
+
+    /* compute weighting factors */
+    w1 = params.density * params.accel / 9.0;
+    w2 = params.density * params.accel / 36.0;
+	
+if (get_global_id(1) == 2){
+
+    if (accel_area.col_or_row == ACCEL_COLUMN)
+    {
+        jj = accel_area.idx;
+
+        ii= get_global_id(0);
+        
+            /* if the cell is not occupied and
+            ** we don't send a density negative */
+            if (!obstacles[ii*params.nx + jj] &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*4] - w1) > 0.0 &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*8] - w2) > 0.0 )
+            {
+                /* increase 'north-side' densities */
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*2] += w1;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*6] += w2;
+                /* decrease 'south-side' densities */
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*4] -= w1;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*8] -= w2;
+            }
+        
+    }
+    else
+    {
+        ii = accel_area.idx;
+
+        jj = get_global_id(0);
+            /* if the cell is not occupied and
+            ** we don't send a density negative */
+            if (!obstacles[ii*params.nx + jj] &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*3] - w1) > 0.0 &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*6] - w2) > 0.0 &&
+            (tmp_cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 )
+            {
+                /* increase 'east-side' densities */
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*1] += w1;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*8] += w2;
+                /* decrease 'west-side' densities */
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*3] -= w1;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*6] -= w2;
+                tmp_cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
+            }
+
+    }
+}
 	
 }
