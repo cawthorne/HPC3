@@ -199,7 +199,7 @@ void list_opencl_platforms(void)
 
     free(platforms);
 
-    exit(EXIT_SUCCESS);
+    exit(0);
 }
 
 void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
@@ -322,9 +322,9 @@ void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
 	
 	if (params.nx == 1000){
 		
-		kernel = clCreateKernel(program, "propagateL", &err);
-		lbm_context->local_sizex = 8;
-		lbm_context->local_sizey = 8;
+		kernel = clCreateKernel(program, "propagateNotPow2", &err);
+		lbm_context->local_sizex = 40;
+		lbm_context->local_sizey = 40;
 	} else {
 		
 		kernel = clCreateKernel(program, "propagate", &err);

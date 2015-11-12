@@ -53,7 +53,7 @@ void reduceL(
 
 	barrier(CLK_LOCAL_MEM_FENCE);
    }
-   partial_sums[group_id] = local_sums[0]; 
+   partial_sums[(long)group_id] = local_sums[0]; 
 }
 
 void reduce(                                          
@@ -227,16 +227,14 @@ int kk;       /* generic counters */
 	    float w1,w2;  /* weighting factors */
 
     /* compute weighting factors */
-    w1 = params.density * params.accel / 9.0;
-    w2 = params.density * params.accel / 36.0;
+    w1 = params.density * params.accel * w1C;
+    w2 = params.density * params.accel * w2C;
 	
-if (get_global_id(1) == 2){
-
-    if (accel_area.col_or_row == ACCEL_COLUMN)
+    if (accel_area.col_or_row == ACCEL_COLUMN && get_global_id(0) == 3)
     {
         jj = accel_area.idx;
 
-        ii= get_global_id(0);
+        ii= get_global_id(1);
         
             /* if the cell is not occupied and
             ** we don't send a density negative */
@@ -256,7 +254,7 @@ if (get_global_id(1) == 2){
             }
         
     }
-    else
+    else if (accel_area.col_or_row != ACCEL_COLUMN && get_global_id(1) == 3)
     {
         ii = accel_area.idx;
 
@@ -279,11 +277,11 @@ if (get_global_id(1) == 2){
             }
 
     }
-}
 
 }
 
-__kernel void propagateL(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us, const int iter){
+__kernel void propagateNotPow2(param_t params, accel_area_t accel_area, __global float* cells, __global float* tmp_cells, __global int* obstacles, __local float* l_us, __global float* g_us, const int iter){
+
 
 
      int ii,jj;     /* generic counters */
@@ -430,10 +428,10 @@ int kk;       /* generic counters */
 	    float w1,w2;  /* weighting factors */
 
     /* compute weighting factors */
-    w1 = params.density * params.accel / 9.0;
-    w2 = params.density * params.accel / 36.0;
+    w1 = params.density * params.accel * w1C;
+    w2 = params.density * params.accel * w2C;
 
-    if (accel_area.col_or_row == ACCEL_COLUMN)
+    if (accel_area.col_or_row == ACCEL_COLUMN && get_global_id(0) == 3)
     {
         jj = accel_area.idx;
 
@@ -457,7 +455,7 @@ int kk;       /* generic counters */
             }
         
     }
-    else
+    else if (accel_area.col_or_row != ACCEL_COLUMN && get_global_id(1) == 3)
     {
         ii = accel_area.idx;
 
