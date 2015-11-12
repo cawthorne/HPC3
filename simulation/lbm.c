@@ -265,6 +265,20 @@ int main(int argc, char* argv[])
 		av_vels[i] = u/(float)ob_num;
 	    //printf("\navs %.12E %d %.12E %.12E\n",u,ob_num,calc_reynolds(params,av_vels[i]), total_density(params, cells));
 	}
+	
+	float* mover = malloc(sizeof(float)*params.nx*params.ny*9);
+	
+	for (i= 0;i<params.ny*params.ny;i++){
+		mover[i*9] = cells[i];
+		mover[i*9 + 1]= cells[i + 1*params.ny*params.nx];
+		mover[i*9 + 2]= cells[i + 2*params.ny*params.nx];
+		mover[i*9 + 3]= cells[i + 3*params.ny*params.nx];
+		mover[i*9 + 4]= cells[i + 4*params.ny*params.nx];
+		mover[i*9 + 5]= cells[i + 5*params.ny*params.nx];
+		mover[i*9 + 6]= cells[i + 6*params.ny*params.nx];
+		mover[i*9 + 7]= cells[i + 7*params.ny*params.nx];
+		mover[i*9 + 8]= cells[i + 8*params.ny*params.nx];
+	}
 
     // Do not remove this, or the timing will be incorrect!
     clFinish(lbm_context.queue);
@@ -282,7 +296,7 @@ int main(int argc, char* argv[])
     printf("Elapsed user CPU time:\t\t%.6f (s)\n", usrtim);
     printf("Elapsed system CPU time:\t%.6f (s)\n", systim);
 
-    write_values(final_state_file, av_vels_file, params, cells, obstacles, av_vels);
+    write_values(final_state_file, av_vels_file, params, mover, obstacles, av_vels);
     finalise(&cells, &tmp_cells, &obstacles, &av_vels);
 
     return EXIT_SUCCESS;

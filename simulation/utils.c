@@ -208,26 +208,24 @@ void initialise(const char* param_file, accel_area_t * accel_area,
     w2 = params->density      /36.0;
 
     /* Initialise arrays */
-    for (ii = 0; ii < params->ny; ii++)
-    {
-        for (jj = 0; jj < params->nx; jj++)
+
+        for (jj = 0; jj < params->nx*params->ny; jj++)
         {
             /* centre */
-            (*cells_ptr)[(ii*params->nx + jj)*9] = w0;
+            (*cells_ptr)[jj] = w0;
             /* axis directions */
-            (*cells_ptr)[(ii*params->nx + jj)*9+1] = w1;
-            (*cells_ptr)[(ii*params->nx + jj)*9+2] = w1;
-            (*cells_ptr)[(ii*params->nx + jj)*9+3] = w1;
-            (*cells_ptr)[(ii*params->nx + jj)*9+4] = w1;
+            (*cells_ptr)[jj + params->nx*params->ny*1] = w1;
+            (*cells_ptr)[jj + params->nx*params->ny*2] = w1;
+            (*cells_ptr)[jj + params->nx*params->ny*3] = w1;
+            (*cells_ptr)[jj + params->nx*params->ny*4] = w1;
             /* diagonals */
-            (*cells_ptr)[(ii*params->nx + jj)*9+5] = w2;
-            (*cells_ptr)[(ii*params->nx + jj)*9+6] = w2;
-            (*cells_ptr)[(ii*params->nx + jj)*9+7] = w2;
-            (*cells_ptr)[(ii*params->nx + jj)*9+8] = w2;
+            (*cells_ptr)[jj + params->nx*params->ny*5] = w2;
+            (*cells_ptr)[jj + params->nx*params->ny*6] = w2;
+            (*cells_ptr)[jj + params->nx*params->ny*7] = w2;
+            (*cells_ptr)[jj + params->nx*params->ny*8] = w2;
 
-            (*obstacles_ptr)[ii*params->nx + jj] = 0;
+            
         }
-    }
 
     /* Fill in locations of obstacles */
     for (ii = 0; ii < params->ny; ii++)
@@ -237,7 +235,7 @@ void initialise(const char* param_file, accel_area_t * accel_area,
             /* coordinates of (jj, ii) scaled to 'real world' terms */
             const float x_pos = jj*(BOX_X_SIZE/params->nx);
             const float y_pos = ii*(BOX_Y_SIZE/params->ny);
-
+			(*obstacles_ptr)[ii*params->nx + jj] = 0;
             for (kk = 0; kk < n_obstacles; kk++)
             {
                 if (x_pos >= obstacles[kk].obs_x_min &&

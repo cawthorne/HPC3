@@ -39,8 +39,7 @@ void reduce(
    int group_id       = get_num_groups(0)*get_num_groups(1)*iter + get_group_id(0)*get_num_groups(1) + get_group_id(1);                   
    
    float sum;  
-   int tots;
-   int i,j;                                      
+   int tots;                                    
    int mask;
    for (mask=1;mask<num_wrk_items;mask*=2){
     	
@@ -79,18 +78,18 @@ if (get_global_id(1) == 2){
             /* if the cell is not occupied and
             ** we don't send a density negative */
             if (!obstacles[ii*params.nx + jj] &&
-            (cells[(ii*params.nx + jj)*9 + 4] - w1) > 0.0 &&
-            (cells[(ii*params.nx + jj)*9 + 7] - w2) > 0.0 &&
-            (cells[(ii*params.nx + jj)*9 + 8] - w2) > 0.0 )
+            (cells[ii*params.nx + jj + params.nx*params.ny*4] - w1) > 0.0 &&
+            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 &&
+            (cells[ii*params.nx + jj + params.nx*params.ny*8] - w2) > 0.0 )
             {
                 /* increase 'north-side' densities */
-                cells[(ii*params.nx + jj)*9 + 2] += w1;
-                cells[(ii*params.nx + jj)*9 + 5] += w2;
-                cells[(ii*params.nx + jj)*9 + 6] += w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*2] += w1;
+                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*6] += w2;
                 /* decrease 'south-side' densities */
-                cells[(ii*params.nx + jj)*9 + 4] -= w1;
-                cells[(ii*params.nx + jj)*9 + 7] -= w2;
-                cells[(ii*params.nx + jj)*9 + 8] -= w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*4] -= w1;
+                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*8] -= w2;
             }
         
     }
@@ -102,18 +101,18 @@ if (get_global_id(1) == 2){
             /* if the cell is not occupied and
             ** we don't send a density negative */
             if (!obstacles[ii*params.nx + jj] &&
-            (cells[(ii*params.nx + jj)*9 + 3] - w1) > 0.0 &&
-            (cells[(ii*params.nx + jj)*9 + 6] - w2) > 0.0 &&
-            (cells[(ii*params.nx + jj)*9 + 7] - w2) > 0.0 )
+            (cells[ii*params.nx + jj + params.nx*params.ny*3] - w1) > 0.0 &&
+            (cells[ii*params.nx + jj + params.nx*params.ny*6] - w2) > 0.0 &&
+            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 )
             {
                 /* increase 'east-side' densities */
-                cells[(ii*params.nx + jj)*9 + 1] += w1;
-                cells[(ii*params.nx + jj)*9 + 5] += w2;
-                cells[(ii*params.nx + jj)*9 + 8] += w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*1] += w1;
+                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*8] += w2;
                 /* decrease 'west-side' densities */
-                cells[(ii*params.nx + jj)*9 + 3] -= w1;
-                cells[(ii*params.nx + jj)*9 + 6] -= w2;
-                cells[(ii*params.nx + jj)*9 + 7] -= w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*3] -= w1;
+                cells[ii*params.nx + jj + params.nx*params.ny*6] -= w2;
+                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
             }
 
     }
@@ -160,17 +159,17 @@ int kk;       /* generic counters */
 			
 			 float local_cell[NSPEEDS];
 				
-			int current_index = (ii*params.nx + jj)*9;
+			int current_index = (ii*params.nx + jj);
 			
 				local_cell[0] = cells[current_index];
-				local_cell[1] = cells[(ii*params.nx + x_w)*9 + 1];		
-				local_cell[2] = cells[(y_s*params.nx + jj)*9  + 2];				
-				local_cell[3] = cells[(ii*params.nx + x_e)*9 + 3];
-				local_cell[4] = cells[(y_n*params.nx + jj)*9 + 4];  
-				local_cell[5] = cells[(y_s*params.nx + x_w)*9  + 5]; 
-				local_cell[6] = cells[(y_s*params.nx + x_e)*9  + 6];
-				local_cell[7] = cells[(y_n*params.nx + x_e)*9 + 7]; 
-				local_cell[8] = cells[(y_n*params.nx + x_w)*9  + 8];	
+				local_cell[1] = cells[(ii*params.nx + x_w) + params.nx*params.ny*1];		
+				local_cell[2] = cells[(y_s*params.nx + jj) + params.nx*params.ny*2];				
+				local_cell[3] = cells[(ii*params.nx + x_e) + params.nx*params.ny*3];
+				local_cell[4] = cells[(y_n*params.nx + jj) + params.nx*params.ny*4];  
+				local_cell[5] = cells[(y_s*params.nx + x_w) + params.nx*params.ny*5]; 
+				local_cell[6] = cells[(y_s*params.nx + x_e) + params.nx*params.ny*6];
+				local_cell[7] = cells[(y_n*params.nx + x_e) + params.nx*params.ny*7]; 
+				local_cell[8] = cells[(y_n*params.nx + x_w) + params.nx*params.ny*8];	
 
 
             	local_density = local_cell[0] 
@@ -197,30 +196,30 @@ int kk;       /* generic counters */
 				const int b = obstacles[ii*params.nx + jj];
 				
 		
-				tmp_cells[current_index + 0] = b ? local_cell[0] : (local_cell[0] + params.omega * ( w0C * local_density * (1.0 - u_sq * (1.5)) - local_cell[0]));
+				tmp_cells[current_index + params.nx*params.ny*0] = b ? local_cell[0] : (local_cell[0] + params.omega * ( w0C * local_density * (1.0 - u_sq * (1.5)) - local_cell[0]));
                 
-				tmp_cells[current_index + 1] = b ? local_cell[3] : (local_cell[1] + params.omega * ( w1C * local_density * (1.0 + u_x * 3.0
+				tmp_cells[current_index + params.nx*params.ny*1] = b ? local_cell[3] : (local_cell[1] + params.omega * ( w1C * local_density * (1.0 + u_x * 3.0
                     + (u_x * u_x)*4.5
                     - u_sq *(1.5)) - local_cell[1]));
-				tmp_cells[current_index + 2] = b ? local_cell[4]:(local_cell[2] + params.omega * (w1C * local_density * (1.0 + u_y * 3.0
+				tmp_cells[current_index + params.nx*params.ny*2] = b ? local_cell[4]:(local_cell[2] + params.omega * (w1C * local_density * (1.0 + u_y * 3.0
                     + (u_y * u_y)*4.5
                     - u_sq *(1.5)) - local_cell[2]));
-				tmp_cells[current_index + 3] = b ? local_cell[1]:(local_cell[3] + params.omega * (w1C * local_density * (1.0 - u_x* 3.0
+				tmp_cells[current_index + params.nx*params.ny*3] = b ? local_cell[1]:(local_cell[3] + params.omega * (w1C * local_density * (1.0 - u_x* 3.0
                     + (u_x * u_x)*4.5
                     - u_sq *(1.5)) - local_cell[3]));
-				tmp_cells[current_index + 4] = b ? local_cell[2]:(local_cell[4] + params.omega * ( w1C * local_density * (1.0 - u_y * 3.0
+				tmp_cells[current_index + params.nx*params.ny*4] = b ? local_cell[2]:(local_cell[4] + params.omega * ( w1C * local_density * (1.0 - u_y * 3.0
                     + (u_y * u_y)*4.5
                     - u_sq *(1.5)) - local_cell[4]));
-				tmp_cells[current_index + 5] = b ? local_cell[7]:(local_cell[5] + params.omega * (w2C * local_density * (1.0 + utmp1 * 3.0
+				tmp_cells[current_index + params.nx*params.ny*5] = b ? local_cell[7]:(local_cell[5] + params.omega * (w2C * local_density * (1.0 + utmp1 * 3.0
                     + (utmp1 * utmp1)*4.5
                     - u_sq *(1.5)) - local_cell[5]));
-				tmp_cells[current_index + 6] = b ? local_cell[8]:(local_cell[6] + params.omega * (w2C * local_density * (1.0 + utmp2 * 3.0
+				tmp_cells[current_index + params.nx*params.ny*6] = b ? local_cell[8]:(local_cell[6] + params.omega * (w2C * local_density * (1.0 + utmp2 * 3.0
                     + (utmp2 * utmp2)*4.5
                     - u_sq *(1.5)) - local_cell[6]));
-				tmp_cells[current_index + 7] = b ? local_cell[5]:(local_cell[7] + params.omega * (w2C * local_density * (1.0 - utmp1 * 3.0
+				tmp_cells[current_index + params.nx*params.ny*7] = b ? local_cell[5]:(local_cell[7] + params.omega * (w2C * local_density * (1.0 - utmp1 * 3.0
                     + (utmp1 * utmp1)*4.5
                     - u_sq *(1.5)) - local_cell[7]));
-				tmp_cells[current_index + 8] = b ? local_cell[6]:(local_cell[8] + params.omega * (w2C * local_density * (1.0 - utmp2 * 3.0
+				tmp_cells[current_index + params.nx*params.ny*8] = b ? local_cell[6]:(local_cell[8] + params.omega * (w2C * local_density * (1.0 - utmp2 * 3.0
                     + (utmp2 * utmp2)*4.5
                     - u_sq *(1.5)) - local_cell[8]));
 					
@@ -228,34 +227,34 @@ int kk;       /* generic counters */
 					
 
 					
-                local_density = (tmp_cells[current_index + 0] +
-							 tmp_cells[current_index + 1]+
-							 tmp_cells[current_index + 2]+
-							 tmp_cells[current_index + 3]+
-							 tmp_cells[current_index + 4]+
-							 tmp_cells[current_index + 5]+
-							 tmp_cells[current_index + 6]+
-							 tmp_cells[current_index + 7]+
-							 tmp_cells[current_index + 8]);
+                local_density = (tmp_cells[current_index + params.nx*params.ny*0] +
+							 tmp_cells[current_index + params.nx*params.ny*1]+
+							 tmp_cells[current_index + params.nx*params.ny*2]+
+							 tmp_cells[current_index + params.nx*params.ny*3]+
+							 tmp_cells[current_index + params.nx*params.ny*4]+
+							 tmp_cells[current_index + params.nx*params.ny*5]+
+							 tmp_cells[current_index + params.nx*params.ny*6]+
+							 tmp_cells[current_index + params.nx*params.ny*7]+
+							 tmp_cells[current_index + params.nx*params.ny*8]);
 
                 /* x-component of velocity */
                 u_x = b ? u_x : 
-				(tmp_cells[current_index + 1] +
-                        tmp_cells[current_index + 5] +
-                        tmp_cells[current_index + 8]
-                    - (tmp_cells[current_index + 3] +
-                        tmp_cells[current_index + 6] +
-                        tmp_cells[current_index + 7])) /
+				(tmp_cells[current_index + params.nx*params.ny*1] +
+                        tmp_cells[current_index + params.nx*params.ny*5] +
+                        tmp_cells[current_index + params.nx*params.ny*8]
+                    - (tmp_cells[current_index + params.nx*params.ny*3] +
+                        tmp_cells[current_index + params.nx*params.ny*6] +
+                        tmp_cells[current_index + params.nx*params.ny*7])) /
                     local_density;
 
                 /* compute y velocity component */
                 u_y =  b ? u_y : 
-				(tmp_cells[current_index + 2] +
-                        tmp_cells[current_index + 5] +
-                        tmp_cells[current_index + 6]
-                    - (tmp_cells[current_index + 4] +
-                        tmp_cells[current_index + 7] +
-                        tmp_cells[current_index + 8])) /
+				(tmp_cells[current_index + params.nx*params.ny*2] +
+                        tmp_cells[current_index + params.nx*params.ny*5] +
+                        tmp_cells[current_index + params.nx*params.ny*6]
+                    - (tmp_cells[current_index + params.nx*params.ny*4] +
+                        tmp_cells[current_index + params.nx*params.ny*7] +
+                        tmp_cells[current_index + params.nx*params.ny*8])) /
                     local_density;
 				
                 /* accumulate the norm of x- and y- velocity components */
