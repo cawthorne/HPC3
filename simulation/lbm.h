@@ -1,12 +1,6 @@
 #ifndef LBM_HDR_FILE
 #define LBM_HDR_FILE
 
-#if __APPLE__
-#include <OpenCL/cl.h>
-#else
-#include <CL/cl.h>
-#endif
-
 #define NSPEEDS         9
 
 /* Size of box in imaginary 'units */
@@ -15,13 +9,13 @@
 
 /* struct to hold the parameter values */
 typedef struct {
-    cl_int nx;            /* no. of cells in x-direction */
-    cl_int ny;            /* no. of cells in y-direction */
-    cl_int max_iters;      /* no. of iterations */
-    cl_int reynolds_dim;  /* dimension for Reynolds number */
-    cl_float density;       /* density per link */
-    cl_float accel;         /* density redistribution */
-    cl_float omega;         /* relaxation parameter */
+    int nx;            /* no. of cells in x-direction */
+    int ny;            /* no. of cells in y-direction */
+    int max_iters;      /* no. of iterations */
+    int reynolds_dim;  /* dimension for Reynolds number */
+    float density;       /* density per link */
+    float accel;         /* density redistribution */
+    float omega;         /* relaxation parameter */
 } param_t;
 
 /* obstacle positions */
@@ -32,38 +26,24 @@ typedef struct {
     float obs_y_max;
 } obstacle_t;
 
-typedef struct {
-    cl_context context;
-    cl_device_id device;
-    cl_command_queue queue;
-	cl_kernel kernel[2];
-	cl_mem args[7];
-	int local_sizex;
-	int local_sizey;
-} lbm_context_t;
-
 /* struct to hold the 'speed' values */
 typedef struct {
-    cl_float speeds[NSPEEDS];
+    float speeds[NSPEEDS];
 } speed_t;
 
 typedef enum { ACCEL_ROW=0, ACCEL_COLUMN=1 } accel_e;
 typedef struct {
-    cl_int col_or_row;
-    cl_int idx;
+    int col_or_row;
+    int idx;
 } accel_area_t;
 
 /* Parse command line arguments to get filenames */
 void parse_args (int argc, char* argv[],
-    char** final_state_file, char** av_vels_file, char** param_file, int * device_id);
+    char** final_state_file, char** av_vels_file, char** param_file);
 
 void initialise(const char* paramfile, accel_area_t * accel_area,
     param_t* params, float** cells_ptr, float** tmp_cells_ptr,
     int** obstacles_ptr, float** av_vels_ptr);
-
-void opencl_initialise(int device_id, param_t params, accel_area_t accel_area,
-    lbm_context_t * lbm_context, float * cells, int * obstacles, float* tmp_cells);
-void opencl_finalise(lbm_context_t lbm_context);
 
 void list_opencl_platforms(void);
 

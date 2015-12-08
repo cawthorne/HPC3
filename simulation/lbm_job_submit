@@ -4,7 +4,7 @@
 #PBS -joe
 #PBS -o LBM2.out
 #PBS -q teaching
-#PBS -l nodes=1:ppn=8:gpus=1,walltime=00:05:00
+#PBS -l nodes=1:ppn=4,walltime=00:00:50
 
 #! Mail to user if job aborts
 #PBS -m a
@@ -12,12 +12,8 @@
 #! application name
 application="make run"
 
-# Select the GPU that we've been allocated
-device=$(cat $PBS_GPUFILE)
-device=${device#*gpu}
-
 #! Run options for the application
-options="PARAM_FILE=../inputs/large_pipe.params DEVICE=$device"
+options="PARAM_FILE=../inputs/small_pipe.params DEVICE=$device"
 
 ###############################################################
 ### You should not have to change anything below this line ####
@@ -33,11 +29,11 @@ echo Directory is `pwd`
 echo PBS job ID is $PBS_JOBID
 echo This jobs runs on the following machines:
 echo `cat $PBS_NODEFILE | uniq`
-echo "Using device $device"
+
+#! Create a machine file for MPI
+cat $PBS_NODEFILE > machine.file.$PBS_JOBID
 
 numnodes=`wc $PBS_NODEFILE | awk '{ print $1 }'`
 
-export OMP_NUM_THREADS=$numnodes
-
-#! Run the executable
-$application $options
+#! Run the parallel MPI executable (nodes*ppn)
+mpirun -np $numnodes -machinefile machine.file.$PBS_JOBID $application $options

@@ -1,51 +1,42 @@
-CC=gcc
+CC=mpicc
 
-CFLAGS=-O3 -g -Wall -Wextra -Wno-unused-parameter 
+CFLAGS=-O3 -g -Wall
 
 EXE=lbm
 
-PARAM_FILE=../inputs/large_pipe.params
+PARAM_FILE=../inputs/small_pipe.params
 
 FINAL_STATE_FILE=./final_state.dat
 AV_VELS_FILE=./av_vels.dat
 
-REF_FINAL_STATE_FILE=../check/large_pipe.final_state.dat
-REF_AV_VELS_FILE=../check/large_pipe.av_vels.dat
-
-DEVICE=0
+REF_FINAL_STATE_FILE=../check/small_pipe.final_state.dat
+REF_AV_VELS_FILE=../check/small_pipe.av_vels.dat
 
 LDLIBS=-lm
 
-PLATFORM = $(shell uname -s)
-ifeq ($(PLATFORM), Darwin)
-	LDLIBS += -framework OpenCL
-else
-	LDLIBS += -lOpenCL
-endif
-
 SUBMIT_DIR=submission
-SUBMIT_FILES=Makefile lbm.c lbm.h simulation.c utils.c opencl.c kernels.cl
+SUBMIT_FILES=Makefile lbm.c lbm.h utils.c
 ENV_SCRIPT=env.sh
 
-$(EXE) : utils.o lbm.o simulation.o opencl.o
+$(EXE) : utils.o lbm.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 %.o: %.c Makefile lbm.h
 	$(CC) $(CFLAGS) -o $@ -c $<
-
+	
 git:
-	git add simulation.c
 	git add utils.c
 	git add lbm.c
 	git add lbm.h
 	git add Makefile
 	git add lbm_job_submit
-	git add kernels.cl
 	git add env.sh
-	git add opencl.c
+
+local: $(EXE)
+	mpirun ./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE)
 	
 run: $(EXE)
-	./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE) -d $(DEVICE)
+	./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE)
 
 plot:
 	gnuplot final_state.plt
@@ -75,7 +66,6 @@ submission:
 	@cd $(SUBMIT_DIR) && ../../check/check_submission
 
 .PHONY: clean submission
-
 clean:
 	rm -f *.o $(EXE)
 
