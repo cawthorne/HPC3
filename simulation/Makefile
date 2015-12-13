@@ -33,7 +33,7 @@ git:
 	git add env.sh
 
 local: $(EXE)
-	mpirun ./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE)
+	mpirun -np 4 ./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE)
 	
 run: $(EXE)
 	./$(EXE) -a $(AV_VELS_FILE) -f $(FINAL_STATE_FILE) -p $(PARAM_FILE)

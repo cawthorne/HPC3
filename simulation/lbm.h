@@ -43,12 +43,12 @@ void parse_args (int argc, char* argv[],
 
 void initialise(const char* paramfile, accel_area_t * accel_area,
     param_t* params, float** cells_ptr, float** tmp_cells_ptr,
-    int** obstacles_ptr, float** av_vels_ptr);
+    int** obstacles_ptr, float** av_vels_ptr, int size);
 
 void list_opencl_platforms(void);
 
 void write_values(const char * final_state_file, const char * av_vels_file,
-    const param_t params, float* cells, int* obstacles, float* av_vels);
+    const param_t params, float* cells, int* obstacles, float* av_vels, int rank, int size);
 
 void finalise(float** cells_ptr, float** tmp_cells_ptr,
     int** obstacles_ptr, float** av_vels_ptr);
