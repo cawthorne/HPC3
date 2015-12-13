@@ -4,7 +4,7 @@
 #PBS -joe
 #PBS -o LBM2.out
 #PBS -q teaching
-#PBS -l nodes=1:ppn=4,walltime=00:00:50
+#PBS -l nodes=4:ppn=16,walltime=00:00:50
 
 #! Mail to user if job aborts
 #PBS -m a
@@ -13,7 +13,7 @@
 application="make run"
 
 #! Run options for the application
-options="PARAM_FILE=../inputs/small_pipe.params DEVICE=$device"
+options="PARAM_FILE=../inputs/large_pipe.params"
 
 ###############################################################
 ### You should not have to change anything below this line ####
@@ -35,5 +35,7 @@ cat $PBS_NODEFILE > machine.file.$PBS_JOBID
 
 numnodes=`wc $PBS_NODEFILE | awk '{ print $1 }'`
 
+export OMP_NUM_THREADS=16
+
 #! Run the parallel MPI executable (nodes*ppn)
-mpirun -np $numnodes -machinefile machine.file.$PBS_JOBID $application $options
+mpirun -n 4 -pernode -machinefile machine.file.$PBS_JOBID $application $options
