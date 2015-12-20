@@ -43,7 +43,7 @@ void parse_args (int argc, char* argv[],
 
 void initialise(const char* paramfile, accel_area_t * accel_area,
     param_t* params, float** cells_ptr, float** tmp_cells_ptr,
-    int** obstacles_ptr, float** av_vels_ptr, int size);
+    int** obstacles_ptr, float** av_vels_ptr, int* ob_num);
 
 void list_opencl_platforms(void);
 

@@ -97,7 +97,7 @@ void parse_args (int argc, char* argv[],
 
 void initialise(const char* param_file, accel_area_t * accel_area,
     param_t* params, float** cells_ptr, float** tmp_cells_ptr,
-    int** obstacles_ptr, float** av_vels_ptr, int size)
+    int** obstacles_ptr, float** av_vels_ptr, int* ob_num)
 {
     FILE   *fp;            /* file pointer */
     int    ii,jj, kk;          /* generic counters */
@@ -216,6 +216,7 @@ void initialise(const char* param_file, accel_area_t * accel_area,
             
         }
 
+		*ob_num = params->nx*params->ny;
     /* Fill in locations of obstacles */
     for (ii = 0; ii < params->ny; ii++)
     {
@@ -233,6 +234,8 @@ void initialise(const char* param_file, accel_area_t * accel_area,
                     y_pos <  obstacles[kk].obs_y_max)
                 {
                     (*obstacles_ptr)[ii*params->nx + jj] = 1;
+					*ob_num = *ob_num - 1;
+					break;
                 }
             }
         }

@@ -70,65 +70,6 @@
 ** initialise, timestep loop, finalise
 */
 
-void accelerate_flow(const param_t params, const accel_area_t accel_area,
-    float* cells, int* obstacles, int myrank)
-{
-    int ii,jj;     /* generic counters */
-    double w1,w2;  /* weighting factors */
-
-    /* compute weighting factors */
-    w1 = params.density * params.accel / 9.0;
-    w2 = params.density * params.accel / 36.0;
-
-    if (accel_area.col_or_row == ACCEL_COLUMN)
-    {
-        jj = accel_area.idx;
-
-		for (ii = (myrank)*params.ny/4;ii<(myrank+1)*params.ny/4;ii++){
-            /* if the cell is not occupied and
-            ** we don't send a density negative */
-            if (!obstacles[ii*params.nx + jj] &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*4] - w1) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*8] - w2) > 0.0 )
-            {
-                /* increase 'north-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*2] += w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*6] += w2;
-                /* decrease 'south-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*4] -= w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*8] -= w2;
-            }
-        }
-    }
-    else
-    {
-        ii = accel_area.idx;
-
-        for (jj = 0; jj < params.nx; jj++)
-        {
-            /* if the cell is not occupied and
-            ** we don't send a density negative */
-            if (!obstacles[ii*params.nx + jj] &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*3] - w1) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*6] - w2) > 0.0 &&
-            (cells[ii*params.nx + jj + params.nx*params.ny*7] - w2) > 0.0 )
-            {
-                /* increase 'east-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*1] += w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*5] += w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*8] += w2;
-                /* decrease 'west-side' densities */
-                cells[ii*params.nx + jj + params.nx*params.ny*3] -= w1;
-                cells[ii*params.nx + jj + params.nx*params.ny*6] -= w2;
-                cells[ii*params.nx + jj + params.nx*params.ny*7] -= w2;
-            }
-        }
-    }
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -184,13 +125,9 @@ int main(int argc, char* argv[])
 
     parse_args(argc, argv, &final_state_file, &av_vels_file, &param_file);
 
-    initialise(param_file, &accel_area, &params, &cells, &tmp_cells, &obstacles, &av_vels, size);
+	int ob_num;
 	
-	int ob_num = 0;
-	int i;
-	for (i=0;i<params.nx*params.ny;i++){
-		ob_num += !obstacles[i];
-	}
+    initialise(param_file, &accel_area, &params, &cells, &tmp_cells, &obstacles, &av_vels, &ob_num);
 	
 	
     /* iterate for max_iters timesteps */
@@ -203,20 +140,18 @@ int main(int argc, char* argv[])
 	
 		    //float w1,w2;  /* weighting factors */
 
-    /* compute weighting factors */
-   // w1 = params.density * params.accel * w1C;
-    //w2 = params.density * params.accel * w2C;
 		int top, bottom;
-	if (myrank == 3){
+	if (myrank == size-1){
 		bottom = 0;
 	} else {
 		bottom = myrank+1;
 	}
 	if (myrank == 0){
-		top = 4;
+		top = size;
 	} else {
 		top = myrank;
 	}
+	
   float *sendBottom = malloc(sizeof(float)*params.nx*3);
   float *sendTop = malloc(sizeof(float)*params.nx*3);
   float *recTop = malloc(sizeof(float)*params.nx*3);
@@ -242,10 +177,10 @@ int main(int argc, char* argv[])
 	float avs;
 	  	int left,right;
 	if (myrank == 0){
-		left = 3;
+		left = size-1;
 	} else { left = myrank-1; }
 	
-	if (myrank == 3){
+	if (myrank == size-1){
 		right = 0;
 	} else { right = myrank+1; }
 	
@@ -259,7 +194,7 @@ int main(int argc, char* argv[])
     {
         jj = accel_area.idx;
 		
-        for (ii = (myrank)*params.ny/4;ii<(myrank+1)*params.ny/4;ii++){
+        for (ii = (myrank)*params.ny/size;ii<(myrank+1)*params.ny/size;ii++){
             /* if the cell is not occupied and
             ** we don't send a density negative */
             if (!obstacles[ii*params.nx + jj] &&
@@ -312,12 +247,12 @@ int main(int argc, char* argv[])
   int sideNum;
   
 	for (sideNum = 0;sideNum<params.nx;sideNum++){
-		  sendTop[sideNum] = cells[myrank*params.nx*params.ny/4 + sideNum + params.nx*params.ny*4];
-		  sendTop[sideNum + params.nx] = cells[myrank*params.nx*params.ny/4 + sideNum + params.nx*params.ny*7];
-		  sendTop[sideNum + params.nx*2] = cells[myrank*params.nx*params.ny/4 + sideNum + params.nx*params.ny*8];
-		  sendBottom[sideNum] = cells[(myrank+1)*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*2];
-		  sendBottom[sideNum + params.nx] = cells[(myrank+1)*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*5];
-		  sendBottom[sideNum + params.nx*2] = cells[(myrank+1)*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*6];
+		  sendTop[sideNum] = cells[myrank*params.nx*params.ny/size + sideNum + params.nx*params.ny*4];
+		  sendTop[sideNum + params.nx] = cells[myrank*params.nx*params.ny/size + sideNum + params.nx*params.ny*7];
+		  sendTop[sideNum + params.nx*2] = cells[myrank*params.nx*params.ny/size + sideNum + params.nx*params.ny*8];
+		  sendBottom[sideNum] = cells[(myrank+1)*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*2];
+		  sendBottom[sideNum + params.nx] = cells[(myrank+1)*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*5];
+		  sendBottom[sideNum + params.nx*2] = cells[(myrank+1)*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*6];
 	}
   
   
@@ -330,30 +265,29 @@ int main(int argc, char* argv[])
 
   }
   else {
-   
 	
     MPI_Recv(recBottom, params.nx*3, MPI_FLOAT, right, tag, MPI_COMM_WORLD, &status);
 	MPI_Recv(recTop,params.nx*3, MPI_FLOAT, left, tag, MPI_COMM_WORLD, &status);
 	MPI_Send(sendTop,params.nx*3, MPI_FLOAT, left, tag, MPI_COMM_WORLD);
 	MPI_Send(sendBottom,params.nx*3, MPI_FLOAT, right, tag, MPI_COMM_WORLD);
   }
-	
+  
 	for (sideNum = 0;sideNum<params.nx;sideNum++){
-		  cells[(bottom)*params.nx*params.ny/4 + sideNum + params.nx*params.ny*4] = recBottom[sideNum];
-		  cells[(bottom)*params.nx*params.ny/4 + sideNum + params.nx*params.ny*7] = recBottom[(sideNum) + params.nx];
-		  cells[(bottom)*params.nx*params.ny/4 + sideNum + params.nx*params.ny*8] = recBottom[(sideNum) + params.nx*2];
+		  cells[(bottom)*params.nx*params.ny/size + sideNum + params.nx*params.ny*4] = recBottom[sideNum];
+		  cells[(bottom)*params.nx*params.ny/size + sideNum + params.nx*params.ny*7] = recBottom[(sideNum) + params.nx];
+		  cells[(bottom)*params.nx*params.ny/size + sideNum + params.nx*params.ny*8] = recBottom[(sideNum) + params.nx*2];
 		  
-		  cells[top*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*2] = recTop[sideNum];
-		  cells[top*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*5] = recTop[(sideNum) + params.nx];
-		  cells[top*params.nx*params.ny/4 - params.nx + sideNum + params.nx*params.ny*6] = recTop[(sideNum) + params.nx*2];
+		  cells[top*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*2] = recTop[sideNum];
+		  cells[top*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*5] = recTop[(sideNum) + params.nx];
+		  cells[top*params.nx*params.ny/size - params.nx + sideNum + params.nx*params.ny*6] = recTop[(sideNum) + params.nx*2];
 	}
-	avs = 0;
 
+	avs = 0;
 	
 	
-#pragma omp parallel for reduction(+:avs) collapse(2) schedule(guided) firstprivate(myrank) private(u_x,u_y,u_sq,x_e,x_w,y_n,y_s,ii,jj,local_density) shared(av_vels,ompi_mpi_float,ompi_mpi_comm_world,obstacles,tmp_cells,cells,accel_area,params)
+#pragma omp parallel for reduction(+:avs) collapse(2) schedule(guided) firstprivate(myrank) private(u_x,u_y,u_sq,x_e,x_w,y_n,y_s,ii,jj,local_density) shared(av_vels,obstacles,tmp_cells,cells,accel_area,params)
 		
-	for (ii = (myrank)*params.ny/4;ii<(myrank+1)*params.ny/4;ii++){
+	for (ii = (myrank)*params.ny/size;ii<(myrank+1)*params.ny/size;ii++){
 		for (jj = 0;jj<params.nx;jj++){
 			//printf("Position: %d %d %d\n\n\n",jj,ii,its);
 			if (ii + 1 == params.ny){
@@ -399,7 +333,7 @@ int main(int argc, char* argv[])
 
          
                 u_y = 
-				(local_cell[2] + local_cell[5] + local_cell[6]- (local_cell[4] + 
+				(local_cell[2] + local_cell[5] + local_cell[6] - (local_cell[4] + 
 				local_cell[7] 
 				+ local_cell[8]))/ local_density;
 
@@ -515,8 +449,8 @@ if (myrank == 0){
     printf("Elapsed system CPU time:\t%.6f (s)\n", systim);
 }
 	float* mover = malloc(sizeof(float)*params.nx*params.ny*9);
-	
-	for (ii = (myrank)*params.ny/4;ii<(myrank+1)*params.ny/4;ii++){
+	int i;
+	for (ii = (myrank)*params.ny/size;ii<(myrank+1)*params.ny/size;ii++){
 		for (jj = 0;jj<params.nx;jj++){
 			i = ii*params.nx + jj;
 			
@@ -565,7 +499,7 @@ void write_values(const char * final_state_file, const char * av_vels_file,
         DIE("could not open file output file");
     }
 
-	for (ii = (rank)*params.ny/4;ii<(rank+1)*params.ny/4;ii++){
+	for (ii = (rank)*params.ny/size;ii<(rank+1)*params.ny/size;ii++){
 		for (jj = 0;jj<params.nx;jj++){
             /* an occupied cell */
             if (obstacles[ii*params.nx + jj])
@@ -620,6 +554,8 @@ void write_values(const char * final_state_file, const char * av_vels_file,
     }
 	
 	if (rank != 0){fclose(fp);}
+	
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	char p_avs[strlen(av_vels_file)+2];
 		

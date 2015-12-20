@@ -13,7 +13,7 @@
 application="make run"
 
 #! Run options for the application
-options="PARAM_FILE=../inputs/large_pipe.params"
+options="PARAM_FILE=../inputs/small_pipe.params"
 
 ###############################################################
 ### You should not have to change anything below this line ####
@@ -31,11 +31,16 @@ echo This jobs runs on the following machines:
 echo `cat $PBS_NODEFILE | uniq`
 
 #! Create a machine file for MPI
-cat $PBS_NODEFILE > machine.file.$PBS_JOBID
+uniq $PBS_NODEFILE > machine.file.$PBS_JOBID
+uniq $PBS_NODEFILE >> machine.file.$PBS_JOBID
+sort machine.file.$PBS_JOBID > foo
+mv foo machine.file.$PBS_JOBID
 
 numnodes=`wc $PBS_NODEFILE | awk '{ print $1 }'`
 
-export OMP_NUM_THREADS=16
+export I_MPI_DEBUG=4
+export KMP_AFFINITY=compact,verbose
+export OMP_NUM_THREADS=8
 
 #! Run the parallel MPI executable (nodes*ppn)
-mpirun -n 4 -pernode -machinefile machine.file.$PBS_JOBID $application $options
+mpirun -np 8 -machinefile machine.file.$PBS_JOBID $application $options
